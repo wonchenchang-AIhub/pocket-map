@@ -1,0 +1,37 @@
+name: Filter and publish pocket map
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Automatically exclude private collection categories
+        run: node scripts/update-data.cjs
+      - name: Verify public data
+        run: node scripts/verify-data.cjs
+      - name: Package only public website files
+        run: |
+          mkdir public-site
+          cp index.html style.css app.js privacy-policy.js places.json .nojekyll 地圖收藏清冊.html public-site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public-site
+      - uses: actions/deploy-pages@v4
+        id: deployment

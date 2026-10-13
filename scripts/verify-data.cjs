@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+const policy=require('../privacy-policy.js');
+const root=path.resolve(__dirname,'..');
+const read=name=>fs.readFileSync(path.join(root,name),'utf8').replace(/^\uFEFF/,'');
+const data=JSON.parse(read('places.json'));
+const html=read('地圖收藏清冊.html');
+const embedded=JSON.parse(html.match(/const DATA=(\[[\s\S]*?\]);/)[1]);
+assert.deepEqual(data,policy.filter(data),'網站資料含未允許的收藏或欄位');
+assert.deepEqual(embedded,data,'兩份公開資料不一致');
+assert.deepEqual(policy.filter([{n:'一般餐廳',t:'在地小吃'},{n:'個人收藏',t:'新分類'},{n:'國華中醫藥器材行（瓶瓶罐罐）',t:'在地小吃'},{n:'商店',t:'購物伴手禮'}]),[{n:'一般餐廳',t:'在地小吃'}]);
+assert.ok(Object.keys(JSON.parse(html.match(/const CATS=(.*?);/)[1])).every(k=>policy.allowed.includes(k)));
+console.log(`檢查通過：${data.length} 筆，無未允許分類；指定店家持續排除。`);
